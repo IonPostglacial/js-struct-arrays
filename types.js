@@ -24,26 +24,25 @@ function nextPowerOf2(n) { // see https://graphics.stanford.edu/~seander/bithack
 }
 
 Types.Struct = function (shape) {
-  const members = Object.keys(shape);
-  const offsets = new Array(members);
-  const getters = members.map(member => shape[member].get);
-  const setters = members.map(member => shape[member].set);
-  const membersLogSizes = members.map(member => shape[member].logSize);
-
-  const self = function (...values) {
-    for (let i = 0; i < values.length; i++) {
-      this[members[i]] = values[i];
+  const self = (function () { // Precalculate members offsets and data accessors
+    const members = Object.keys(shape);
+    const obj = {
+      properties: members,
+      getters: members.map(member => shape[member].get),
+      setters: members.map(member => shape[member].set),
+      offsets: new Array(members)
+    };
+    let currentMemberOffset = 0;
+    for (let i = 0; i < obj.properties.length; i++) {
+      const member = obj.properties[i];
+      obj.offsets[i] = currentMemberOffset;
+      currentMemberOffset += shape[member].size;
     }
-  };
-  self.properties = members;
-  self.offsets = offsets;
-  let currentMemberOffset = 0;
-  for (let [i, member] of self.properties.entries()) {
-    self.offsets[i] = currentMemberOffset;
-    currentMemberOffset += shape[member].size;
-  }
-  let globalOffset = nextPowerOf2(currentMemberOffset);
-  self.globalLogOffset = Math.log2(globalOffset)|0;
+    obj.globalLogOffset = Math.log2(nextPowerOf2(currentMemberOffset));
+    obj._tmpVal = new Array(obj.properties.length); // Preallocate a slot for the Array getter
+    return obj;
+  })();
+
 
   self.Array = function (length) {
     this.length = length;
@@ -51,14 +50,17 @@ Types.Struct = function (shape) {
   }
   self.Array.prototype = {
     memberOffset (n, member) {
-      return ((n << self.globalLogOffset) + self.offsets[member]);
+      return ((n << self.globalLogOffset) + self.offsets[member])|0;
     },
     get (n) {
-      return new self(...self.properties.map((_, member) => getters[member].call(this.dataView, this.memberOffset(n, member))));
+      for (let i = 0; i < self.properties.length; i++) {
+        self._tmpVal[i] = self.getters[i].call(this.dataView, this.memberOffset(n, i));
+      }
+      return self._tmpVal;
     },
     set (n, values) {
-      for (let [i, member] of self.properties.entries()) {
-        setters[i].call(this.dataView, this.memberOffset(n, i), values[member]);
+      for (let i = 0; i < values.length; i++) {
+        self.setters[i].call(this.dataView, this.memberOffset(n, i), values[i]);
       }
     },
     ensureCapacity (capacity) {

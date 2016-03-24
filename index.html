@@ -8,21 +8,43 @@
       "use strict";
 
       const Point = Types.Struct({x: Types.Uint8, y: Types.Float64});
+      class NewArray extends Array { get(n) { return this[n]; } set(n, v) { this[n] = v; } }
       const vec = new Point.Array(0);
-      console.log(Point);
-      console.log(vec);
-      vec.push({x: 1, y: 2});
-      vec.push({y: 42, x: 13});
-      vec.push({x: 1, y: 3});
-      vec.push({y: 2, x: 4});
-      vec.push({x: 2, y: 5});
-      vec.push({y: 2, x: 6});
-      vec.push({x: 2, y: 7});
-      vec.push({y: 2, x: 8});
-      vec.push({x: 3, y: 9});
-      vec.push({y: 3, x: 10});
-      console.log(vec.get(0));
-      console.log(vec.get(5));
+      const arr = new NewArray();
+      const MAX_INDEX = 10000000;
+
+      function timeIt(f) {
+        let now = Date.now();
+        f();
+        console.log(Date.now() - now);
+      }
+
+      function benchPush(arr) {
+        for (let i = 0; i < MAX_INDEX; i++) {
+          arr.push([16 + i, 2 * i]);
+        }
+      }
+
+      function benchGet(arr) {
+        for (let i = 1; i < MAX_INDEX; i++) {
+          arr.get(i);
+        }
+      }
+
+      function benchSet(arr) {
+        for (let i = 1; i < MAX_INDEX; i++) {
+          arr.set(i, 1);
+        }
+      }
+      console.log("push:");
+      timeIt(() => benchPush(vec));
+      timeIt(() => benchPush(arr));
+      console.log("get:");
+      timeIt(() => benchGet(vec));
+      timeIt(() => benchGet(arr));
+      console.log("set:");
+      timeIt(() => benchSet(vec));
+      timeIt(() => benchSet(arr));
     });
     </script>
   </head>
