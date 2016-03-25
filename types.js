@@ -24,9 +24,9 @@ function nextPowerOf2(n) { // see https://graphics.stanford.edu/~seander/bithack
 }
 
 Types.Struct = function (shape) {
-  const self = (function () { // Precalculate members offsets and data accessors
+  const self = (function () { // Create a private scope for self construction
     const members = Object.keys(shape);
-    const obj = {
+    const obj = { // Precalculate members offsets and data accessors
       properties: members,
       getters: members.map(member => shape[member].get),
       setters: members.map(member => shape[member].set),
@@ -39,28 +39,28 @@ Types.Struct = function (shape) {
       currentMemberOffset += shape[member].size;
     }
     obj.globalLogOffset = Math.log2(nextPowerOf2(currentMemberOffset));
-    obj._tmpVal = new Array(obj.properties.length); // Preallocate a slot for the Array getter
     return obj;
   })();
 
+  self.memberOffset = function (n, member) {
+    return ((n << this.globalLogOffset) + this.offsets[member])|0;
+  }
 
   self.Array = function (length) {
     this.length = length;
     this.dataView = new DataView(new ArrayBuffer(length << self.globalLogOffset));
   }
   self.Array.prototype = {
-    memberOffset (n, member) {
-      return ((n << self.globalLogOffset) + self.offsets[member])|0;
-    },
     get (n) {
-      for (let i = 0; i < self.properties.length; i++) {
-        self._tmpVal[i] = self.getters[i].call(this.dataView, this.memberOffset(n, i));
+      var tmpVal = new Array(self.properties.length);
+      for (var i = 0; i < tmpVal.length; i++) {
+        tmpVal[i] = self.getters[i].call(this.dataView, self.memberOffset(n, i));
       }
-      return self._tmpVal;
+      return tmpVal;
     },
     set (n, values) {
-      for (let i = 0; i < values.length; i++) {
-        self.setters[i].call(this.dataView, this.memberOffset(n, i), values[i]);
+      for (var i = 0; i < values.length; i++) {
+        self.setters[i].call(this.dataView, self.memberOffset(n, i), values[i]);
       }
     },
     ensureCapacity (capacity) {

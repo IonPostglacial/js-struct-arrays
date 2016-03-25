@@ -7,7 +7,7 @@
     requirejs(["types"], function (Types) {
       "use strict";
 
-      const Point = Types.Struct({x: Types.Uint8, y: Types.Float64});
+      const Point = Types.Struct({x: Types.Float64, y: Types.Float64});
       class NewArray extends Array { get(n) { return this[n]; } set(n, v) { this[n] = v; } }
       const vec = new Point.Array(0);
       const arr = new NewArray();
