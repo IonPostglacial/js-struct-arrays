@@ -30,7 +30,7 @@ Types.Struct = function (shape) {
       properties: members,
       getters: members.map(member => shape[member].get),
       setters: members.map(member => shape[member].set),
-      offsets: new Array(members)
+      offsets: new Array(members.length)
     };
     let currentMemberOffset = 0;
     for (let i = 0; i < obj.properties.length; i++) {
